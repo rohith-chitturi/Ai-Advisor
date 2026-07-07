@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: ai_advisor_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin_password
+      POSTGRES_DB: ai_advisor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7
+    container_name: ai_advisor_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: ai_advisor_meili
+    environment:
+      - MEILI_MASTER_KEY=ai_advisor_master_key
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: ai_advisor_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:
+  qdrant_data:
