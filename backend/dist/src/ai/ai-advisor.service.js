@@ -58,7 +58,7 @@ let AiAdvisorService = class AiAdvisorService {
                         toolName: zod_1.z.string(),
                         slug: zod_1.z.string().describe("The exact slug of the tool from the database context, if available."),
                         whyItFits: zod_1.z.string().describe("A compelling explanation of why this tool is perfect for the user."),
-                        pricingModel: zod_1.z.string().optional()
+                        pricingModel: zod_1.z.string().nullable()
                     }))
                 }),
                 prompt: prompt,

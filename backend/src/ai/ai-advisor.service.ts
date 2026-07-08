@@ -53,7 +53,7 @@ export class AiAdvisorService {
             toolName: z.string(),
             slug: z.string().describe("The exact slug of the tool from the database context, if available."),
             whyItFits: z.string().describe("A compelling explanation of why this tool is perfect for the user."),
-            pricingModel: z.string().optional()
+            pricingModel: z.string().nullable()
           }))
         }),
         prompt: prompt,

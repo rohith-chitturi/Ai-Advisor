@@ -9,7 +9,7 @@ export declare class SearchController {
             toolName: string;
             slug: string;
             whyItFits: string;
-            pricingModel?: string | undefined;
+            pricingModel: string | null;
         }[];
     } | {
         error: string;

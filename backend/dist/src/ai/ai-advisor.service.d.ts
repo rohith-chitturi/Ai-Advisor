@@ -11,7 +11,7 @@ export declare class AiAdvisorService {
             toolName: string;
             slug: string;
             whyItFits: string;
-            pricingModel?: string | undefined;
+            pricingModel: string | null;
         }[];
     }>;
 }
