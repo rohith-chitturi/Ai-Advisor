@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Hanken_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import QueryProvider from "@/lib/query-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${inter.variable} ${hanken.variable} h-full antialiased dark`}
       >
         <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
-          {children}
+          <QueryProvider>
+            {children}
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>
