@@ -51,7 +51,7 @@ let MeilisearchService = class MeilisearchService {
     client;
     toolsIndex;
     constructor() {
-        this.client = new meilisearch_1.MeiliSearch({
+        this.client = new meilisearch_1.Meilisearch({
             host: process.env.MEILISEARCH_HOST || 'http://localhost:7700',
             apiKey: process.env.MEILI_MASTER_KEY || 'ai_advisor_master_key',
         });

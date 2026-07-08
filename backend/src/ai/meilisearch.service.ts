@@ -1,16 +1,16 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { MeiliSearch, Index } from 'meilisearch';
+import { Meilisearch, Index } from 'meilisearch';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 @Injectable()
 export class MeilisearchService implements OnModuleInit {
-  private client: MeiliSearch;
+  private client: Meilisearch;
   private toolsIndex: Index;
 
   constructor() {
-    this.client = new MeiliSearch({
+    this.client = new Meilisearch({
       host: process.env.MEILISEARCH_HOST || 'http://localhost:7700',
       apiKey: process.env.MEILI_MASTER_KEY || 'ai_advisor_master_key',
     });
