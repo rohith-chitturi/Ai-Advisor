@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Hanken_Grotesk } from "next/font/google";
+import { Inter, Hanken_Grotesk, Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import QueryProvider from "@/lib/query-provider";
+import { CommandPalette } from "@/components/command-palette";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,11 +32,12 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${inter.variable} ${hanken.variable} h-full antialiased dark`}
+        className={cn("h-full", "antialiased", "dark", inter.variable, hanken.variable, "font-sans", geist.variable)}
       >
         <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
           <QueryProvider>
             {children}
+            <CommandPalette />
           </QueryProvider>
         </body>
       </html>
