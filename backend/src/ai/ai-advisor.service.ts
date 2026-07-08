@@ -14,7 +14,7 @@ export class AiAdvisorService {
 
   async recommendTools(query: string, userContext: any) {
     // 1. Semantic Search using Qdrant with actual embeddings
-    let vectorResults = [];
+    let vectorResults: any[] = [];
     try {
       const { embedding } = await embed({
         model: openai.embedding('text-embedding-3-small'),
