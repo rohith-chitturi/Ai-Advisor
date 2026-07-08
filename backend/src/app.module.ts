@@ -7,8 +7,10 @@ import { SearchController } from './search/search.controller';
 import { AiAdvisorService } from './ai/ai-advisor.service';
 import { MeilisearchService } from './ai/meilisearch.service';
 import { QdrantService } from './ai/qdrant.service';
+import { AuthModule } from './auth/auth.module';
+
 @Module({
-  imports: [],
+  imports: [AuthModule],
   controllers: [AppController, ToolsController, SearchController],
   providers: [AppService, ToolsService, AiAdvisorService, MeilisearchService, QdrantService],
 })

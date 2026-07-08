@@ -1,78 +1,162 @@
 import { db } from './db';
-import { tools, categories, toolsToCategories } from './schema';
+import { tools, categories, toolsToCategories, users } from './schema';
+import { embed } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import { Meilisearch } from 'meilisearch';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const qdrantClient = new QdrantClient({ url: process.env.QDRANT_URL || 'http://localhost:6333' });
+const meiliClient = new Meilisearch({ 
+  host: process.env.MEILI_HOST || 'http://localhost:7700',
+  apiKey: process.env.MEILI_MASTER_KEY || 'ai_advisor_master_key',
+});
 
 async function seed() {
-  console.log('Seeding data...');
+  console.log('🌱 Starting comprehensive data seed...');
 
-  // Seed categories
-  const insertedCategories = await db.insert(categories).values([
-    { name: 'Language Models', slug: 'language-models', description: 'General purpose large language models' },
-    { name: 'Image Generation', slug: 'image-generation', description: 'AI tools that generate images from text' },
-    { name: 'Coding Assistants', slug: 'coding-assistants', description: 'AI tools to help write and debug code' },
-  ]).returning();
-
-  const [lmCategory, igCategory, codeCategory] = insertedCategories;
-
-  // Seed tools
-  const insertedTools = await db.insert(tools).values([
-    {
-      name: 'ChatGPT',
-      slug: 'chatgpt',
-      description: 'OpenAI\'s flagship conversational model.',
-      websiteUrl: 'https://chat.openai.com',
-      overallScore: 98,
-      pricingType: 'FREEMIUM',
-      features: { voice: true, vision: true, search: true },
-    },
-    {
-      name: 'Claude',
-      slug: 'claude',
-      description: 'Anthropic\'s highly capable and safe AI assistant.',
-      websiteUrl: 'https://claude.ai',
-      overallScore: 97,
-      pricingType: 'FREEMIUM',
-      features: { vision: true, long_context: true },
-    },
-    {
-      name: 'Midjourney',
-      slug: 'midjourney',
-      description: 'High quality AI image generation tool.',
-      websiteUrl: 'https://midjourney.com',
-      overallScore: 95,
-      pricingType: 'PAID',
-      features: { vision: true, high_resolution: true },
-    },
-    {
-      name: 'Cursor',
-      slug: 'cursor',
-      description: 'The AI Code Editor built to make you extraordinarily productive.',
-      websiteUrl: 'https://cursor.sh',
-      overallScore: 96,
-      pricingType: 'FREEMIUM',
-      features: { codebase_indexing: true, terminal: true },
-    }
-  ]).returning();
-
-  // Link tools to categories
-  const chatgpt = insertedTools.find(t => t.slug === 'chatgpt');
-  const claude = insertedTools.find(t => t.slug === 'claude');
-  const midjourney = insertedTools.find(t => t.slug === 'midjourney');
-  const cursor = insertedTools.find(t => t.slug === 'cursor');
-
-  if (chatgpt && claude && midjourney && cursor) {
-    await db.insert(toolsToCategories).values([
-      { toolId: chatgpt.id, categoryId: lmCategory.id },
-      { toolId: claude.id, categoryId: lmCategory.id },
-      { toolId: midjourney.id, categoryId: igCategory.id },
-      { toolId: cursor.id, categoryId: codeCategory.id },
-    ]);
+  // 1. Clear existing data
+  console.log('Clearing existing data...');
+  await db.delete(toolsToCategories);
+  await db.delete(tools);
+  await db.delete(categories);
+  
+  // Clear Meili
+  try {
+    await meiliClient.index('tools').deleteAllDocuments();
+  } catch (e) {
+    console.warn('Meilisearch index may not exist yet.');
   }
 
-  console.log('Seeding completed!');
+  // Clear Qdrant
+  try {
+    await qdrantClient.deleteCollection('tools');
+  } catch (e) {
+    console.warn('Qdrant collection may not exist yet.');
+  }
+  
+  // Recreate Qdrant collection
+  await qdrantClient.createCollection('tools', {
+    vectors: { size: 1536, distance: 'Cosine' },
+  });
+
+  // 2. Seed Categories
+  const insertedCategories = await db.insert(categories).values([
+    { name: 'Language Models', slug: 'language-models', description: 'General purpose large language models for chat and generation' },
+    { name: 'Image Generation', slug: 'image-generation', description: 'AI tools that generate or edit images from text' },
+    { name: 'Coding Assistants', slug: 'coding-assistants', description: 'AI tools to help write, refactor, and debug code' },
+    { name: 'Video Generation', slug: 'video-generation', description: 'AI tools for creating and editing video content' },
+    { name: 'Productivity', slug: 'productivity', description: 'AI tools to boost daily workflow, writing, and organization' },
+  ]).returning();
+
+  const catMap = insertedCategories.reduce((acc, cat) => {
+    acc[cat.slug] = cat.id;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // 3. Seed Tools (20 robust tools)
+  const toolData = [
+    { catSlug: 'language-models', tool: { name: 'ChatGPT', slug: 'chatgpt', description: 'OpenAI flagship model with reasoning capabilities.', websiteUrl: 'https://chat.openai.com', overallScore: 98, pricingType: 'FREEMIUM', features: { reasoning: true, plugins: true }, pros: ['Extremely versatile', 'Voice mode is incredible'], cons: ['Usage limits on pro'] } },
+    { catSlug: 'language-models', tool: { name: 'Claude', slug: 'claude', description: 'Anthropic AI assistant focusing on safety and massive context windows.', websiteUrl: 'https://claude.ai', overallScore: 97, pricingType: 'FREEMIUM', features: { large_context: true, artifacts: true }, pros: ['Amazing writer', 'Huge context window'], cons: ['Strict safety filters'] } },
+    { catSlug: 'language-models', tool: { name: 'Gemini', slug: 'gemini', description: 'Google natively multimodal AI model.', websiteUrl: 'https://gemini.google.com', overallScore: 94, pricingType: 'FREEMIUM', features: { multimodal: true, integration: true }, pros: ['Workspace integration', 'Fast'], cons: ['Can hallucinate facts'] } },
+    { catSlug: 'language-models', tool: { name: 'Perplexity AI', slug: 'perplexity', description: 'AI search engine that provides cited answers to queries.', websiteUrl: 'https://perplexity.ai', overallScore: 96, pricingType: 'FREEMIUM', features: { web_search: true, citations: true }, pros: ['Accurate citations', 'Fast research'], cons: ['Not meant for creative writing'] } },
+    
+    { catSlug: 'image-generation', tool: { name: 'Midjourney', slug: 'midjourney', description: 'Highest quality AI image generation tool running via Discord.', websiteUrl: 'https://midjourney.com', overallScore: 98, pricingType: 'PAID', features: { photorealism: true, stylized: true }, pros: ['Incredible aesthetics', 'Highly detailed'], cons: ['Requires Discord', 'No free tier'] } },
+    { catSlug: 'image-generation', tool: { name: 'DALL-E 3', slug: 'dalle-3', description: 'OpenAI image generator built into ChatGPT.', websiteUrl: 'https://chat.openai.com', overallScore: 92, pricingType: 'PAID', features: { text_in_image: true, prompt_following: true }, pros: ['Follows prompts exactly', 'Generates readable text'], cons: ['Images can look overly "AI"'] } },
+    { catSlug: 'image-generation', tool: { name: 'Stable Diffusion', slug: 'stable-diffusion', description: 'Open source image generation model you can run locally.', websiteUrl: 'https://stability.ai', overallScore: 95, pricingType: 'FREE', features: { open_source: true, custom_models: true }, pros: ['Totally free', 'Uncensored', 'Custom LoRAs'], cons: ['Hard to set up locally', 'Needs good GPU'] } },
+    { catSlug: 'image-generation', tool: { name: 'Leonardo AI', slug: 'leonardo-ai', description: 'Powerful web-based image generation suite for game assets and art.', websiteUrl: 'https://leonardo.ai', overallScore: 93, pricingType: 'FREEMIUM', features: { custom_models: true, canvas: true }, pros: ['Great interface', 'Free daily tokens'], cons: ['Complex for beginners'] } },
+
+    { catSlug: 'coding-assistants', tool: { name: 'Cursor', slug: 'cursor', description: 'The AI Code Editor built as a fork of VS Code.', websiteUrl: 'https://cursor.sh', overallScore: 98, pricingType: 'FREEMIUM', features: { codebase_context: true, composer: true }, pros: ['Incredible multi-file editing', 'Drop-in VS Code replacement'], cons: ['Indexing can be slow on huge repos'] } },
+    { catSlug: 'coding-assistants', tool: { name: 'GitHub Copilot', slug: 'github-copilot', description: 'The original AI pair programmer integrated into IDEs.', websiteUrl: 'https://github.com/features/copilot', overallScore: 95, pricingType: 'PAID', features: { autocomplete: true, chat: true }, pros: ['Huge ecosystem', 'Fast autocomplete'], cons: ['Chat is not as context-aware as Cursor'] } },
+    { catSlug: 'coding-assistants', tool: { name: 'V0 by Vercel', slug: 'v0', description: 'Generative UI tool that creates React and Tailwind components.', websiteUrl: 'https://v0.dev', overallScore: 94, pricingType: 'FREEMIUM', features: { react: true, tailwind: true }, pros: ['Instant UI generation', 'Looks beautiful by default'], cons: ['Only does UI, not logic'] } },
+    { catSlug: 'coding-assistants', tool: { name: 'Codeium', slug: 'codeium', description: 'Free AI code completion tool.', websiteUrl: 'https://codeium.com', overallScore: 92, pricingType: 'FREE', features: { autocomplete: true, chat: true }, pros: ['Generous free tier', 'Good latency'], cons: ['Slightly less accurate than Copilot'] } },
+
+    { catSlug: 'video-generation', tool: { name: 'Synthesia', slug: 'synthesia', description: 'Create professional videos with AI avatars.', websiteUrl: 'https://synthesia.io', overallScore: 93, pricingType: 'PAID', features: { avatars: true, tts: true }, pros: ['Lifelike avatars', 'Great for training videos'], cons: ['Expensive', 'Avatars lack intense emotion'] } },
+    { catSlug: 'video-generation', tool: { name: 'Runway Gen-2', slug: 'runway', description: 'Multimodal AI system that can generate novel videos from text or images.', websiteUrl: 'https://runwayml.com', overallScore: 94, pricingType: 'FREEMIUM', features: { text_to_video: true, image_to_video: true }, pros: ['State of the art generation', 'Web based editor'], cons: ['Outputs can be chaotic/morphing'] } },
+    { catSlug: 'video-generation', tool: { name: 'Sora', slug: 'sora', description: 'OpenAI upcoming hyper-realistic text-to-video model.', websiteUrl: 'https://openai.com/sora', overallScore: 99, pricingType: 'PAID', features: { hyper_realistic: true, long_duration: true }, pros: ['Unmatched quality', 'Physics understanding'], cons: ['Limited availability currently'] } },
+    { catSlug: 'video-generation', tool: { name: 'HeyGen', slug: 'heygen', description: 'AI video generation platform for marketing and sales.', websiteUrl: 'https://heygen.com', overallScore: 92, pricingType: 'FREEMIUM', features: { avatars: true, voice_clone: true }, pros: ['Excellent voice cloning', 'Fast generation'], cons: ['Credits burn quickly'] } },
+
+    { catSlug: 'productivity', tool: { name: 'Notion AI', slug: 'notion-ai', description: 'AI assistant integrated directly into your Notion workspace.', websiteUrl: 'https://notion.so/product/ai', overallScore: 94, pricingType: 'PAID', features: { writing: true, summarization: true }, pros: ['Seamless integration', 'Great for team wikis'], cons: ['Costs extra on top of Notion plan'] } },
+    { catSlug: 'productivity', tool: { name: 'Jasper', slug: 'jasper', description: 'Enterprise AI marketing co-pilot for writing copy.', websiteUrl: 'https://jasper.ai', overallScore: 91, pricingType: 'PAID', features: { marketing_copy: true, brand_voice: true }, pros: ['Custom brand voice', 'SEO integrations'], cons: ['Expensive for solo users'] } },
+    { catSlug: 'productivity', tool: { name: 'Otter.ai', slug: 'otter', description: 'AI meeting assistant that records, transcribes, and summarizes.', websiteUrl: 'https://otter.ai', overallScore: 93, pricingType: 'FREEMIUM', features: { transcription: true, meeting_notes: true }, pros: ['Accurate transcription', 'Auto-joins meetings'], cons: ['Can be intrusive in external meetings'] } },
+    { catSlug: 'productivity', tool: { name: 'Grammarly GO', slug: 'grammarly', description: 'AI writing assistance across all your apps.', websiteUrl: 'https://grammarly.com', overallScore: 92, pricingType: 'FREEMIUM', features: { grammar: true, tone_rewrite: true }, pros: ['Works everywhere', 'Reliable corrections'], cons: ['Can over-sanitize writing voice'] } },
+  ];
+
+  console.log('Inserting tools into Postgres...');
+  const insertedTools = await db.insert(tools).values(toolData.map(t => t.tool)).returning();
+
+  const toolCategoryRelations = insertedTools.map((insertedTool, idx) => {
+    return {
+      toolId: insertedTool.id,
+      categoryId: catMap[toolData[idx].catSlug],
+    };
+  });
+  await db.insert(toolsToCategories).values(toolCategoryRelations);
+
+  console.log('Indexing tools into Qdrant & Meilisearch...');
+  const qdrantPoints = [];
+  const meiliDocuments = [];
+
+  for (let i = 0; i < insertedTools.length; i++) {
+    const t = insertedTools[i];
+    const categoryName = toolData[i].catSlug;
+
+    // Meili doc
+    meiliDocuments.push({
+      id: t.id,
+      toolName: t.name,
+      slug: t.slug,
+      description: t.description,
+      category: categoryName,
+      pricingModel: t.pricingType
+    });
+
+    // Qdrant point
+    const searchContext = `${t.name} - ${categoryName}. ${t.description}. Features: ${JSON.stringify(t.features)}. Pros: ${JSON.stringify(t.pros)}.`;
+    
+    try {
+      const { embedding } = await embed({
+        model: openai.embedding('text-embedding-3-small'),
+        value: searchContext,
+      });
+
+      qdrantPoints.push({
+        id: t.id,
+        vector: embedding,
+        payload: {
+          slug: t.slug,
+          name: t.name,
+          category: categoryName,
+          description: t.description
+        }
+      });
+      console.log(`Generated embedding for ${t.name}`);
+    } catch (e) {
+      console.error(`Failed to embed ${t.name}`, e);
+    }
+  }
+
+  // Push to Meilisearch
+  if (meiliDocuments.length > 0) {
+    await meiliClient.index('tools').addDocuments(meiliDocuments);
+    console.log('Pushed to Meilisearch!');
+  }
+
+  // Push to Qdrant
+  if (qdrantPoints.length > 0) {
+    await qdrantClient.upsert('tools', {
+      wait: true,
+      points: qdrantPoints,
+    });
+    console.log('Pushed to Qdrant!');
+  }
+
+  console.log('✅ Seeding completed successfully!');
   process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error('Error seeding data:', err);
+  console.error('❌ Error seeding data:', err);
   process.exit(1);
 });
