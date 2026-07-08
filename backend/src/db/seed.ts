@@ -95,8 +95,8 @@ async function seed() {
   await db.insert(toolsToCategories).values(toolCategoryRelations);
 
   console.log('Indexing tools into Qdrant & Meilisearch...');
-  const qdrantPoints = [];
-  const meiliDocuments = [];
+  const qdrantPoints: any[] = [];
+  const meiliDocuments: any[] = [];
 
   for (let i = 0; i < insertedTools.length; i++) {
     const t = insertedTools[i];

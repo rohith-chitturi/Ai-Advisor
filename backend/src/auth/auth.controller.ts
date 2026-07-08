@@ -1,5 +1,5 @@
 import { Controller, Post, Req, Headers, BadRequestException, Inject } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { Webhook } from 'svix';
 import { db } from '../db/db';
 import { users } from '../db/schema';
