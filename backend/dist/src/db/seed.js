@@ -36,7 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const db_1 = require("./db");
 const schema_1 = require("./schema");
 const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
+const google_1 = require("@ai-sdk/google");
 const js_client_rest_1 = require("@qdrant/js-client-rest");
 const meilisearch_1 = require("meilisearch");
 const dotenv = __importStar(require("dotenv"));
@@ -126,7 +126,7 @@ async function seed() {
         const searchContext = `${t.name} - ${categoryName}. ${t.description}. Features: ${JSON.stringify(t.features)}. Pros: ${JSON.stringify(t.pros)}.`;
         try {
             const { embedding } = await (0, ai_1.embed)({
-                model: openai_1.openai.embedding('text-embedding-3-small'),
+                model: google_1.google.textEmbeddingModel('text-embedding-004'),
                 value: searchContext,
             });
             qdrantPoints.push({

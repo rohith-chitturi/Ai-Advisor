@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { generateObject, embed } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { MeilisearchService } from './meilisearch.service';
 import { QdrantService } from './qdrant.service';
@@ -17,7 +17,7 @@ export class AiAdvisorService {
     let vectorResults: any[] = [];
     try {
       const { embedding } = await embed({
-        model: openai.embedding('text-embedding-3-small'),
+        model: google.textEmbeddingModel('text-embedding-004'),
         value: query,
       });
       vectorResults = await this.qdrantService.searchVectors(embedding, 3);
@@ -46,7 +46,7 @@ export class AiAdvisorService {
 
     try {
       const { object } = await generateObject({
-        model: openai('gpt-4o'),
+        model: google('gemini-1.5-flash'),
         schema: z.object({
           summary: z.string().describe("A brief, friendly summary of the recommendations and how they solve the user's problem."),
           recommendations: z.array(z.object({

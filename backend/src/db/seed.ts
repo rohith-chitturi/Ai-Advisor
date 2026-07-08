@@ -1,7 +1,7 @@
 import { db } from './db';
 import { tools, categories, toolsToCategories, users } from './schema';
 import { embed } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { Meilisearch } from 'meilisearch';
 import * as dotenv from 'dotenv';
@@ -117,7 +117,7 @@ async function seed() {
     
     try {
       const { embedding } = await embed({
-        model: openai.embedding('text-embedding-3-small'),
+        model: google.textEmbeddingModel('text-embedding-004'),
         value: searchContext,
       });
 

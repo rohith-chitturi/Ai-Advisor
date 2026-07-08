@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiAdvisorService = void 0;
 const common_1 = require("@nestjs/common");
 const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
+const google_1 = require("@ai-sdk/google");
 const zod_1 = require("zod");
 const meilisearch_service_1 = require("./meilisearch.service");
 const qdrant_service_1 = require("./qdrant.service");
@@ -27,7 +27,7 @@ let AiAdvisorService = class AiAdvisorService {
         let vectorResults = [];
         try {
             const { embedding } = await (0, ai_1.embed)({
-                model: openai_1.openai.embedding('text-embedding-3-small'),
+                model: google_1.google.textEmbeddingModel('text-embedding-004'),
                 value: query,
             });
             vectorResults = await this.qdrantService.searchVectors(embedding, 3);
@@ -51,7 +51,7 @@ let AiAdvisorService = class AiAdvisorService {
     `;
         try {
             const { object } = await (0, ai_1.generateObject)({
-                model: (0, openai_1.openai)('gpt-4o'),
+                model: (0, google_1.google)('gemini-1.5-flash'),
                 schema: zod_1.z.object({
                     summary: zod_1.z.string().describe("A brief, friendly summary of the recommendations and how they solve the user's problem."),
                     recommendations: zod_1.z.array(zod_1.z.object({
