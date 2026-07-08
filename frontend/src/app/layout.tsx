@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Hanken_Grotesk, Geist } from "next/font/google";
-import { ClerkProvider, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import QueryProvider from "@/lib/query-provider";
 import { CommandPalette } from "@/components/command-palette";
 import "./globals.css";
@@ -44,13 +44,13 @@ export default function RootLayout({
                   <a href="/" className="font-bold text-lg tracking-tight">AI Advisor</a>
                 </div>
                 <div className="flex items-center gap-4">
-                  <SignedOut>
+                  <Show when="signed-out">
                     <SignInButton mode="modal" />
                     <SignUpButton mode="modal" />
-                  </SignedOut>
-                  <SignedIn>
+                  </Show>
+                  <Show when="signed-in">
                     <UserButton />
-                  </SignedIn>
+                  </Show>
                 </div>
               </div>
             </header>
