@@ -20,9 +20,15 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.8",
+    "@langchain/core": "^1.2.1",
+    "@langchain/openai": "^1.5.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@qdrant/js-client-rest": "^1.18.0",
+    "ai": "^7.0.17",
+    "meilisearch": "^0.59.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
